@@ -33,8 +33,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, symbols } = await req.json();
-    console.log(`Received request: action=${action}, symbols=${JSON.stringify(symbols)}`);
+    const { action, symbols, query } = await req.json();
+    console.log(`Received request: action=${action}, symbols=${JSON.stringify(symbols)}, query=${query}`);
 
     if (!FINNHUB_API_KEY) {
       throw new Error('FINNHUB_API_KEY is not configured');
@@ -124,7 +124,11 @@ serve(async (req) => {
     }
 
     if (action === 'search') {
-      const { query } = await req.json();
+      if (!query) {
+        return new Response(JSON.stringify({ results: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const searchRes = await fetch(
         `${FINNHUB_BASE_URL}/search?q=${encodeURIComponent(query)}&token=${FINNHUB_API_KEY}`
       );
