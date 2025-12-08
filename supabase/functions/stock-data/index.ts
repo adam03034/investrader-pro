@@ -26,6 +26,17 @@ interface CompanyProfile {
   marketCapitalization: number;
 }
 
+function getPeriodDays(period: string): number {
+  switch (period) {
+    case '1W': return 7;
+    case '1M': return 30;
+    case '3M': return 90;
+    case '6M': return 180;
+    case '1Y': return 365;
+    default: return 30;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -33,31 +44,92 @@ serve(async (req) => {
   }
 
   try {
-    const { action, symbols, query } = await req.json();
-    console.log(`Received request: action=${action}, symbols=${JSON.stringify(symbols)}, query=${query}`);
+    const { action, symbols, query, symbol, period } = await req.json();
+    console.log(`Received request: action=${action}, symbols=${JSON.stringify(symbols)}, query=${query}, symbol=${symbol}, period=${period}`);
 
     if (!FINNHUB_API_KEY) {
       throw new Error('FINNHUB_API_KEY is not configured');
     }
 
+    if (action === 'history') {
+      // Fetch historical candle data for a single symbol
+      const days = getPeriodDays(period || '1M');
+      const now = Math.floor(Date.now() / 1000);
+      const from = now - days * 24 * 60 * 60;
+      
+      // Determine resolution based on period
+      let resolution = 'D'; // Daily by default
+      if (period === '1W') resolution = '60'; // Hourly for 1 week
+      
+      try {
+        const [candleRes, quoteRes, profileRes] = await Promise.all([
+          fetch(`${FINNHUB_BASE_URL}/stock/candle?symbol=${symbol}&resolution=${resolution}&from=${from}&to=${now}&token=${FINNHUB_API_KEY}`),
+          fetch(`${FINNHUB_BASE_URL}/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`),
+          fetch(`${FINNHUB_BASE_URL}/stock/profile2?symbol=${symbol}&token=${FINNHUB_API_KEY}`)
+        ]);
+
+        const candles = await candleRes.json();
+        const quote: QuoteResponse = await quoteRes.json();
+        const profile: CompanyProfile = await profileRes.json();
+
+        console.log(`Fetched history for ${symbol}:`, { candlesCount: candles.t?.length, quote, profile });
+
+        if (candles.s === 'no_data' || !candles.t) {
+          return new Response(JSON.stringify({ 
+            symbol, 
+            name: profile.name || symbol,
+            data: [],
+            currentPrice: quote.c,
+            change: quote.d,
+            changePercent: quote.dp
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const data = candles.t.map((timestamp: number, i: number) => ({
+          date: new Date(timestamp * 1000).toISOString().split('T')[0],
+          close: candles.c[i],
+          high: candles.h[i],
+          low: candles.l[i],
+          open: candles.o[i],
+          volume: candles.v[i],
+        }));
+
+        return new Response(JSON.stringify({
+          symbol,
+          name: profile.name || symbol,
+          data,
+          currentPrice: quote.c,
+          change: quote.d,
+          changePercent: quote.dp
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        console.error(`Error fetching history for ${symbol}:`, error);
+        throw error;
+      }
+    }
+
     if (action === 'quotes') {
       // Fetch quotes for multiple symbols
       const quotes = await Promise.all(
-        symbols.map(async (symbol: string) => {
+        symbols.map(async (sym: string) => {
           try {
             const [quoteRes, profileRes] = await Promise.all([
-              fetch(`${FINNHUB_BASE_URL}/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`),
-              fetch(`${FINNHUB_BASE_URL}/stock/profile2?symbol=${symbol}&token=${FINNHUB_API_KEY}`)
+              fetch(`${FINNHUB_BASE_URL}/quote?symbol=${sym}&token=${FINNHUB_API_KEY}`),
+              fetch(`${FINNHUB_BASE_URL}/stock/profile2?symbol=${sym}&token=${FINNHUB_API_KEY}`)
             ]);
 
             const quote: QuoteResponse = await quoteRes.json();
             const profile: CompanyProfile = await profileRes.json();
 
-            console.log(`Fetched data for ${symbol}:`, { quote, profile });
+            console.log(`Fetched data for ${sym}:`, { quote, profile });
 
             return {
-              symbol,
-              name: profile.name || symbol,
+              symbol: sym,
+              name: profile.name || sym,
               currentPrice: quote.c,
               change24h: quote.d,
               changePercent24h: quote.dp,
@@ -68,10 +140,10 @@ serve(async (req) => {
               marketCap: profile.marketCapitalization ? profile.marketCapitalization * 1000000 : null,
             };
           } catch (error) {
-            console.error(`Error fetching data for ${symbol}:`, error);
+            console.error(`Error fetching data for ${sym}:`, error);
             return {
-              symbol,
-              name: symbol,
+              symbol: sym,
+              name: sym,
               currentPrice: 0,
               change24h: 0,
               changePercent24h: 0,
@@ -90,10 +162,10 @@ serve(async (req) => {
       // Fetch major market indices/ETFs
       const marketSymbols = ['SPY', 'QQQ', 'DIA', 'VTI'];
       const marketData = await Promise.all(
-        marketSymbols.map(async (symbol) => {
+        marketSymbols.map(async (sym) => {
           try {
             const quoteRes = await fetch(
-              `${FINNHUB_BASE_URL}/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`
+              `${FINNHUB_BASE_URL}/quote?symbol=${sym}&token=${FINNHUB_API_KEY}`
             );
             const quote: QuoteResponse = await quoteRes.json();
 
@@ -105,15 +177,15 @@ serve(async (req) => {
             };
 
             return {
-              symbol,
-              name: names[symbol] || symbol,
+              symbol: sym,
+              name: names[sym] || sym,
               price: quote.c,
               change24h: quote.d,
               changePercent24h: quote.dp,
             };
           } catch (error) {
-            console.error(`Error fetching market data for ${symbol}:`, error);
-            return { symbol, name: symbol, price: 0, change24h: 0, changePercent24h: 0 };
+            console.error(`Error fetching market data for ${sym}:`, error);
+            return { symbol: sym, name: sym, price: 0, change24h: 0, changePercent24h: 0 };
           }
         })
       );
