@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { PortfolioStats } from "@/components/dashboard/PortfolioStats";
@@ -6,15 +7,45 @@ import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { AssetList } from "@/components/dashboard/AssetList";
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { AddAssetDialog } from "@/components/dashboard/AddAssetDialog";
-import { mockAssets, mockPriceHistory } from "@/data/mockData";
+import { mockPriceHistory } from "@/data/mockData";
 import { useStockQuotes, useMarketData, updateAssetsWithLiveData } from "@/hooks/useStockData";
-import { PortfolioStats as PortfolioStatsType } from "@/types/portfolio";
+import { useAuth } from "@/hooks/useAuth";
+import { usePortfolio } from "@/hooks/usePortfolio";
+import { PortfolioStats as PortfolioStatsType, Asset } from "@/types/portfolio";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
   const [addAssetOpen, setAddAssetOpen] = useState(false);
+  const { user, loading: authLoading } = useAuth();
+  const { assets: dbAssets, isLoading: portfolioLoading, addAsset, isAdding } = usePortfolio();
+  const navigate = useNavigate();
   
-  // Get symbols from mock assets
-  const symbols = useMemo(() => mockAssets.map(a => a.symbol), []);
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  // Convert DB assets to Asset type format
+  const baseAssets: Asset[] = useMemo(() => {
+    return dbAssets.map((asset) => ({
+      id: asset.id,
+      symbol: asset.symbol,
+      name: asset.name,
+      quantity: Number(asset.quantity),
+      avgPrice: Number(asset.avg_price),
+      currentPrice: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      value: 0,
+      profit: 0,
+      profitPercent: 0,
+    }));
+  }, [dbAssets]);
+  
+  // Get symbols from portfolio assets
+  const symbols = useMemo(() => baseAssets.map(a => a.symbol), [baseAssets]);
   
   // Fetch live stock quotes
   const { data: quotes, isLoading: quotesLoading } = useStockQuotes(symbols);
@@ -24,12 +55,22 @@ const Index = () => {
   
   // Update assets with live prices
   const assets = useMemo(() => {
-    if (!quotes) return mockAssets;
-    return updateAssetsWithLiveData(mockAssets, quotes);
-  }, [quotes]);
+    if (!quotes || baseAssets.length === 0) return baseAssets;
+    return updateAssetsWithLiveData(baseAssets, quotes);
+  }, [quotes, baseAssets]);
   
   // Calculate portfolio stats from live data
   const portfolioStats: PortfolioStatsType = useMemo(() => {
+    if (assets.length === 0) {
+      return {
+        totalValue: 0,
+        totalProfit: 0,
+        totalProfitPercent: 0,
+        dailyChange: 0,
+        dailyChangePercent: 0,
+      };
+    }
+
     const totalValue = assets.reduce((sum, a) => sum + a.value, 0);
     const totalCostBasis = assets.reduce((sum, a) => sum + (a.quantity * a.avgPrice), 0);
     const totalProfit = totalValue - totalCostBasis;
@@ -46,19 +87,35 @@ const Index = () => {
     };
   }, [assets]);
 
+  const handleAddAsset = (data: { symbol: string; name: string; quantity: number; avgPrice: number }) => {
+    addAsset(data);
+  };
+
+  if (authLoading || portfolioLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header userEmail={user.email} />
       
       <div className="flex">
         <Sidebar />
         
         <main className="flex-1 p-6 lg:p-8 space-y-6">
           <div>
-            <h1 className="text-2xl font-bold mb-1">Welcome back, John</h1>
+            <h1 className="text-2xl font-bold mb-1">Vitajte späť</h1>
             <p className="text-muted-foreground">
-              Here's an overview of your investment portfolio.
-              {quotesLoading && <span className="ml-2 text-xs text-primary animate-pulse">Fetching live data...</span>}
+              Prehľad vášho investičného portfólia.
+              {quotesLoading && <span className="ml-2 text-xs text-primary animate-pulse">Načítavam live dáta...</span>}
             </p>
           </div>
 
@@ -75,7 +132,12 @@ const Index = () => {
         </main>
       </div>
 
-      <AddAssetDialog open={addAssetOpen} onOpenChange={setAddAssetOpen} />
+      <AddAssetDialog 
+        open={addAssetOpen} 
+        onOpenChange={setAddAssetOpen}
+        onAddAsset={handleAddAsset}
+        isAdding={isAdding}
+      />
     </div>
   );
 };

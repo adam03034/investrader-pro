@@ -1,8 +1,31 @@
-import { BarChart3, Bell, Search, Settings } from "lucide-react";
+import { BarChart3, Bell, Search, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-export function Header() {
+interface HeaderProps {
+  userEmail?: string;
+}
+
+export function Header({ userEmail }: HeaderProps) {
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const getInitials = (email?: string) => {
+    if (!email) return "U";
+    return email.slice(0, 2).toUpperCase();
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between px-4">
@@ -19,7 +42,7 @@ export function Header() {
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search assets, markets..." 
+              placeholder="Hľadať aktíva, trhy..." 
               className="pl-10 bg-secondary border-border/50 focus:border-primary/50"
             />
           </div>
@@ -33,9 +56,25 @@ export function Header() {
           <Button variant="ghost" size="icon">
             <Settings className="h-5 w-5" />
           </Button>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center text-primary-foreground font-semibold text-sm ml-2">
-            JD
-          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center text-primary-foreground font-semibold text-sm ml-2 hover:opacity-80 transition-opacity">
+                {getInitials(userEmail)}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-2 py-1.5">
+                <p className="text-sm font-medium">{userEmail}</p>
+                <p className="text-xs text-muted-foreground">Účet</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                Odhlásiť sa
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>
