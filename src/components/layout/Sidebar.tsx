@@ -1,4 +1,4 @@
-import { LayoutDashboard, PieChart, TrendingUp, FileText, Settings, HelpCircle } from "lucide-react";
+import { LayoutDashboard, PieChart, TrendingUp, FileText, Settings, HelpCircle, BookOpen } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -6,6 +6,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: TrendingUp, label: "Trhy", path: "/markets" },
   { icon: FileText, label: "Reporty", path: "/reports" },
+  { icon: BookOpen, label: "Dokumentácia", path: "/docs" },
   { icon: Settings, label: "Nastavenia", path: "/settings" },
 ];
 
