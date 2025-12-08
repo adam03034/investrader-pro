@@ -6,6 +6,7 @@ import { PortfolioStats } from "@/components/dashboard/PortfolioStats";
 import { StockHistoryChart } from "@/components/dashboard/StockHistoryChart";
 import { AssetList } from "@/components/dashboard/AssetList";
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
+import { PortfolioAllocation } from "@/components/dashboard/PortfolioAllocation";
 import { AddAssetDialog } from "@/components/dashboard/AddAssetDialog";
 import { useStockQuotes, useMarketData, updateAssetsWithLiveData } from "@/hooks/useStockData";
 import { useAuth } from "@/hooks/useAuth";
@@ -131,7 +132,10 @@ const Index = () => {
             <div className="xl:col-span-2">
               <StockHistoryChart />
             </div>
-            <MarketOverview data={marketData || []} isLoading={marketLoading} />
+            <div className="space-y-6">
+              <MarketOverview data={marketData || []} isLoading={marketLoading} />
+              <PortfolioAllocation assets={assets} />
+            </div>
           </div>
 
           <AssetList 
