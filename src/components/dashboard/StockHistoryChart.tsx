@@ -167,8 +167,17 @@ export function StockHistoryChart() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : error ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            Nepodarilo sa načítať dáta. Skúste iný symbol.
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+            <p>Nepodarilo sa načítať dáta pre "{activeSymbol}".</p>
+            <p className="text-sm">Skontrolujte, či je symbol správny (napr. AAPL, MSFT, GOOGL).</p>
+          </div>
+        ) : historyData && (!historyData.data || historyData.data.length === 0) ? (
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+            <p>Pre {historyData.symbol} nie sú dostupné historické dáta.</p>
+            <p className="text-sm">Skúste iné časové obdobie alebo iný symbol.</p>
+            {historyData.currentPrice > 0 && (
+              <p className="text-sm text-primary">Aktuálna cena: ${historyData.currentPrice.toFixed(2)}</p>
+            )}
           </div>
         ) : historyData?.data && historyData.data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">

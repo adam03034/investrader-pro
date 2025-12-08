@@ -4,17 +4,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
+import { TrendingUp, Mail, Lock, Loader2, AlertCircle, User } from "lucide-react";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Neplatný email");
 const passwordSchema = z.string().min(6, "Heslo musí mať minimálne 6 znakov");
+const nameSchema = z.string().min(2, "Meno musí mať minimálne 2 znaky");
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   
@@ -29,6 +31,15 @@ export default function Auth() {
 
   const validateForm = (): boolean => {
     setError("");
+    
+    if (!isLogin) {
+      try {
+        nameSchema.parse(displayName);
+      } catch {
+        setError("Meno musí mať minimálne 2 znaky");
+        return false;
+      }
+    }
     
     try {
       emailSchema.parse(email);
@@ -71,7 +82,7 @@ export default function Auth() {
           }
         }
       } else {
-        const { error } = await signUp(email, password);
+        const { error } = await signUp(email, password, displayName);
         if (error) {
           if (error.message.includes("already registered")) {
             setError("Tento email je už zaregistrovaný");
@@ -155,6 +166,24 @@ export default function Auth() {
               </div>
             )}
 
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Meno</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="displayName"
+                    type="text"
+                    placeholder="Vaše meno"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="pl-10 bg-secondary border-border"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -217,6 +246,7 @@ export default function Auth() {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError("");
+                setDisplayName("");
               }}
               className="text-primary hover:underline text-sm"
             >
