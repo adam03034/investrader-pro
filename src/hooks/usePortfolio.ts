@@ -3,6 +3,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 
+// Helper function to create notification
+async function createPurchaseNotification(
+  userId: string,
+  symbol: string,
+  name: string,
+  quantity: number,
+  avgPrice: number
+) {
+  try {
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "purchase",
+      title: `Nákup: ${symbol}`,
+      message: `Pridané ${quantity}x ${name} za ${avgPrice.toFixed(2)} $`,
+    });
+  } catch (error) {
+    console.error("Error creating notification:", error);
+  }
+}
+
 interface PortfolioAsset {
   id: string;
   user_id: string;
@@ -85,10 +105,22 @@ export function usePortfolio() {
           });
 
         if (error) throw error;
+
+        // Create notification for the purchase
+        if (user) {
+          await createPurchaseNotification(
+            user.id,
+            input.symbol,
+            input.name,
+            input.quantity,
+            input.avgPrice
+          );
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portfolio-assets"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
       toast.success("Aktívum bolo pridané do portfólia");
     },
     onError: (error) => {
