@@ -11,9 +11,11 @@ import { useDebounce } from "@/hooks/useDebounce";
 interface AddAssetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAddAsset?: (data: { symbol: string; name: string; quantity: number; avgPrice: number }) => void;
+  isAdding?: boolean;
 }
 
-export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
+export function AddAssetDialog({ open, onOpenChange, onAddAsset, isAdding }: AddAssetDialogProps) {
   const [search, setSearch] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<{ symbol: string; description: string } | null>(null);
   const [quantity, setQuantity] = useState("");
@@ -34,13 +36,21 @@ export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would add the asset to the portfolio
-    console.log({ selectedAsset, quantity, price });
-    onOpenChange(false);
+    if (!selectedAsset || !quantity || !price) return;
+
+    onAddAsset?.({
+      symbol: selectedAsset.symbol,
+      name: selectedAsset.description,
+      quantity: parseFloat(quantity),
+      avgPrice: parseFloat(price),
+    });
+    
+    // Reset form
     setSelectedAsset(null);
     setQuantity("");
     setPrice("");
     setSearch("");
+    onOpenChange(false);
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -57,9 +67,9 @@ export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-card border-border sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-xl">Add Asset to Portfolio</DialogTitle>
+          <DialogTitle className="text-xl">Pridať aktívum do portfólia</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Search for a stock and specify the quantity you own.
+            Vyhľadajte akciu a zadajte množstvo, ktoré vlastníte.
           </DialogDescription>
         </DialogHeader>
 
@@ -67,7 +77,7 @@ export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by symbol or company name..."
+              placeholder="Hľadať podľa symbolu alebo názvu..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 bg-secondary border-border"
@@ -106,7 +116,7 @@ export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
                 </button>
               ))
             ) : search.length > 0 && !searchLoading ? (
-              <p className="text-center text-muted-foreground text-sm py-4">No results found</p>
+              <p className="text-center text-muted-foreground text-sm py-4">Žiadne výsledky</p>
             ) : null}
           </div>
 
@@ -121,7 +131,7 @@ export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
             <form onSubmit={handleSubmit} className="space-y-4 pt-4 border-t border-border">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantity</Label>
+                  <Label htmlFor="quantity">Množstvo</Label>
                   <Input
                     id="quantity"
                     type="number"
@@ -135,7 +145,7 @@ export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="price">Avg. Purchase Price</Label>
+                  <Label htmlFor="price">Priem. nákupná cena</Label>
                   <Input
                     id="price"
                     type="number"
@@ -150,9 +160,13 @@ export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
                 </div>
               </div>
               
-              <Button type="submit" className="w-full gap-2">
-                <Plus className="h-4 w-4" />
-                Add to Portfolio
+              <Button type="submit" className="w-full gap-2" disabled={isAdding}>
+                {isAdding ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                Pridať do portfólia
               </Button>
             </form>
           )}
