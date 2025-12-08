@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { BarChart3, Bell, Search, Settings, LogOut, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
+import { BarChart3, Bell, Search, Settings, LogOut, TrendingUp, TrendingDown, AlertCircle, ShoppingCart, CheckCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useStockQuotes, updateAssetsWithLiveData } from "@/hooks/useStockData";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Asset } from "@/types/portfolio";
 import {
   DropdownMenu,
@@ -20,25 +21,28 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDistanceToNow } from "date-fns";
+import { sk } from "date-fns/locale";
 
 interface HeaderProps {
   userEmail?: string;
 }
 
-interface Notification {
+interface DisplayNotification {
   id: string;
-  type: "gain" | "loss" | "alert";
+  type: "gain" | "loss" | "purchase" | "alert";
   title: string;
   message: string;
-  symbol: string;
-  value: number;
+  created_at?: string;
+  is_read?: boolean;
 }
 
 export function Header({ userEmail }: HeaderProps) {
   const { signOut } = useAuth();
   const { assets: dbAssets } = usePortfolio();
+  const { notifications: dbNotifications, unreadCount, markAllAsRead } = useNotifications();
 
-  // Get portfolio data for notifications
+  // Get portfolio data for real-time notifications
   const baseAssets: Asset[] = useMemo(() => {
     return dbAssets.map((asset) => ({
       id: asset.id,
@@ -63,12 +67,24 @@ export function Header({ userEmail }: HeaderProps) {
     return updateAssetsWithLiveData(baseAssets, quotes);
   }, [quotes, baseAssets]);
 
-  // Generate notifications based on portfolio performance
-  const notifications: Notification[] = useMemo(() => {
-    const notifs: Notification[] = [];
+  // Combine database notifications with real-time price alerts
+  const allNotifications: DisplayNotification[] = useMemo(() => {
+    const notifs: DisplayNotification[] = [];
 
+    // Add database notifications (purchase history)
+    dbNotifications.forEach((notif) => {
+      notifs.push({
+        id: notif.id,
+        type: notif.type as "gain" | "loss" | "purchase" | "alert",
+        title: notif.title,
+        message: notif.message,
+        created_at: notif.created_at,
+        is_read: notif.is_read,
+      });
+    });
+
+    // Add real-time price alerts
     assets.forEach((asset) => {
-      // Significant daily change (> 2%)
       if (Math.abs(asset.changePercent24h) > 2) {
         const isGain = asset.changePercent24h > 0;
         notifs.push({
@@ -76,28 +92,12 @@ export function Header({ userEmail }: HeaderProps) {
           type: isGain ? "gain" : "loss",
           title: `${asset.symbol} ${isGain ? "rastie" : "klesá"}`,
           message: `${isGain ? "+" : ""}${asset.changePercent24h.toFixed(2)}% za posledných 24h`,
-          symbol: asset.symbol,
-          value: asset.changePercent24h,
-        });
-      }
-
-      // Significant profit/loss (> 10%)
-      if (Math.abs(asset.profitPercent) > 10) {
-        const isGain = asset.profitPercent > 0;
-        notifs.push({
-          id: `profit-${asset.id}`,
-          type: isGain ? "gain" : "loss",
-          title: `${asset.symbol} - ${isGain ? "Zisk" : "Strata"}`,
-          message: `${isGain ? "+" : ""}${asset.profitPercent.toFixed(2)}% od nákupu`,
-          symbol: asset.symbol,
-          value: asset.profitPercent,
         });
       }
     });
 
-    // Sort by absolute value (most significant first)
-    return notifs.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)).slice(0, 10);
-  }, [assets]);
+    return notifs.slice(0, 20);
+  }, [dbNotifications, assets]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -106,6 +106,43 @@ export function Header({ userEmail }: HeaderProps) {
   const getInitials = (email?: string) => {
     if (!email) return "U";
     return email.slice(0, 2).toUpperCase();
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case "gain":
+        return <TrendingUp className="h-4 w-4 text-profit" />;
+      case "loss":
+        return <TrendingDown className="h-4 w-4 text-loss" />;
+      case "purchase":
+        return <ShoppingCart className="h-4 w-4 text-primary" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-primary" />;
+    }
+  };
+
+  const getNotificationBgColor = (type: string) => {
+    switch (type) {
+      case "gain":
+        return "bg-profit/20";
+      case "loss":
+        return "bg-loss/20";
+      case "purchase":
+        return "bg-primary/20";
+      default:
+        return "bg-primary/20";
+    }
+  };
+
+  const getNotificationTextColor = (type: string) => {
+    switch (type) {
+      case "gain":
+        return "text-profit";
+      case "loss":
+        return "text-loss";
+      default:
+        return "text-muted-foreground";
+    }
   };
 
   return (
@@ -135,65 +172,66 @@ export function Header({ userEmail }: HeaderProps) {
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
-                {notifications.length > 0 && (
+                {(allNotifications.length > 0 || unreadCount > 0) && (
                   <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
                 )}
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 p-0">
-              <div className="p-4 border-b border-border">
-                <h3 className="font-semibold">Upozornenia</h3>
-                <p className="text-xs text-muted-foreground">
-                  Významné zmeny vo vašom portfóliu
-                </p>
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">Upozornenia</h3>
+                  <p className="text-xs text-muted-foreground">
+                    História nákupov a zmeny cien
+                  </p>
+                </div>
+                {unreadCount > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => markAllAsRead()}
+                    className="text-xs"
+                  >
+                    <CheckCheck className="h-4 w-4 mr-1" />
+                    Prečítať
+                  </Button>
+                )}
               </div>
               <ScrollArea className="h-[300px]">
-                {notifications.length === 0 ? (
+                {allNotifications.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Žiadne nové upozornenia</p>
+                    <p className="text-sm">Žiadne upozornenia</p>
                     <p className="text-xs mt-1">
-                      Upozorníme vás pri významných zmenách cien.
+                      Tu uvidíte históriu nákupov a cenové upozornenia.
                     </p>
                   </div>
                 ) : (
                   <div className="divide-y divide-border">
-                    {notifications.map((notif) => (
+                    {allNotifications.map((notif) => (
                       <div
                         key={notif.id}
-                        className="p-3 hover:bg-secondary/50 transition-colors cursor-pointer"
+                        className={`p-3 hover:bg-secondary/50 transition-colors cursor-pointer ${
+                          notif.is_read === false ? "bg-secondary/30" : ""
+                        }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div
-                            className={`p-2 rounded-lg ${
-                              notif.type === "gain"
-                                ? "bg-profit/20"
-                                : notif.type === "loss"
-                                ? "bg-loss/20"
-                                : "bg-primary/20"
-                            }`}
-                          >
-                            {notif.type === "gain" ? (
-                              <TrendingUp className="h-4 w-4 text-profit" />
-                            ) : notif.type === "loss" ? (
-                              <TrendingDown className="h-4 w-4 text-loss" />
-                            ) : (
-                              <AlertCircle className="h-4 w-4 text-primary" />
-                            )}
+                          <div className={`p-2 rounded-lg ${getNotificationBgColor(notif.type)}`}>
+                            {getNotificationIcon(notif.type)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium">{notif.title}</p>
-                            <p
-                              className={`text-xs ${
-                                notif.type === "gain"
-                                  ? "text-profit"
-                                  : notif.type === "loss"
-                                  ? "text-loss"
-                                  : "text-muted-foreground"
-                              }`}
-                            >
+                            <p className={`text-xs ${getNotificationTextColor(notif.type)}`}>
                               {notif.message}
                             </p>
+                            {notif.created_at && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatDistanceToNow(new Date(notif.created_at), {
+                                  addSuffix: true,
+                                  locale: sk,
+                                })}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -201,7 +239,7 @@ export function Header({ userEmail }: HeaderProps) {
                   </div>
                 )}
               </ScrollArea>
-              {notifications.length > 0 && (
+              {allNotifications.length > 0 && (
                 <div className="p-3 border-t border-border">
                   <Link to="/reports">
                     <Button variant="outline" size="sm" className="w-full">
