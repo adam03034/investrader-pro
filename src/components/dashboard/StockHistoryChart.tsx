@@ -31,8 +31,9 @@ interface StockHistoryResponse {
   name: string;
   data: HistoricalDataPoint[];
   currentPrice: number;
-  change: number;
-  changePercent: number;
+  change: number | null;
+  changePercent: number | null;
+  isDemo?: boolean;
 }
 
 function useStockHistory(symbol: string, period: Period) {
@@ -90,6 +91,7 @@ export function StockHistoryChart() {
             <h2 className="text-lg font-semibold">Historická Analýza Cien</h2>
             <p className="text-muted-foreground text-sm">
               Analyzujte historický vývoj cien akcií
+              {historyData?.isDemo && <span className="ml-2 text-xs text-primary">(simulované dáta)</span>}
             </p>
           </div>
         </div>
