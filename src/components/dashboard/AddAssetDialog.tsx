@@ -13,9 +13,18 @@ interface AddAssetDialogProps {
   onOpenChange: (open: boolean) => void;
   onAddAsset?: (data: { symbol: string; name: string; quantity: number; avgPrice: number }) => void;
   isAdding?: boolean;
+  prefilledSymbol?: string;
+  prefilledName?: string;
 }
 
-export function AddAssetDialog({ open, onOpenChange, onAddAsset, isAdding }: AddAssetDialogProps) {
+export function AddAssetDialog({ 
+  open, 
+  onOpenChange, 
+  onAddAsset, 
+  isAdding,
+  prefilledSymbol,
+  prefilledName 
+}: AddAssetDialogProps) {
   const [search, setSearch] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<{ symbol: string; description: string } | null>(null);
   const [quantity, setQuantity] = useState("");
@@ -26,6 +35,13 @@ export function AddAssetDialog({ open, onOpenChange, onAddAsset, isAdding }: Add
   
   // Fetch quote for selected asset
   const { data: quotes } = useStockQuotes(selectedAsset ? [selectedAsset.symbol] : []);
+  
+  // Handle prefilled values from search bar
+  useEffect(() => {
+    if (open && prefilledSymbol && prefilledName) {
+      setSelectedAsset({ symbol: prefilledSymbol, description: prefilledName });
+    }
+  }, [open, prefilledSymbol, prefilledName]);
   
   // Update price when quote is received
   useEffect(() => {
