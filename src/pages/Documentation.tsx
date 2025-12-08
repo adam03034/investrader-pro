@@ -386,7 +386,7 @@ CREATE TABLE notifications (
                         </div>
 
                         <div className="p-4 border border-border rounded-lg">
-                          <h4 className="font-medium mb-2">Modul technických indikátorov</h4>
+                          <h4 className="font-medium mb-2">Modul technických indikátorov (TypeScript)</h4>
                           <p className="text-sm text-muted-foreground mb-2">
                             Implementácia výpočtu SMA, EMA a RSI indikátorov pre technickú analýzu.
                           </p>
@@ -395,6 +395,23 @@ CREATE TABLE notifications (
                             <div><code>calculateEMA(data, period) → number[]</code></div>
                             <div><code>calculateRSI(data, period) → number[]</code></div>
                           </div>
+                        </div>
+
+                        <div className="p-4 border border-primary/50 rounded-lg bg-primary/5">
+                          <h4 className="font-medium mb-2 text-primary">Python Flask API - Technická analýza</h4>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Externý Python modul pre pokročilú technickú analýzu s využitím NumPy. 
+                            Poskytuje REST API pre výpočet RSI, MACD a Bollingerových pásiem.
+                          </p>
+                          <div className="bg-secondary/30 p-3 rounded font-mono text-xs space-y-1">
+                            <div><code>POST /api/analyze → RSI, MACD, Bollinger</code></div>
+                            <div><code>POST /api/rsi → Relative Strength Index</code></div>
+                            <div><code>POST /api/macd → MACD + Signal + Histogram</code></div>
+                            <div><code>POST /api/bollinger → Upper/Middle/Lower Band</code></div>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Technológie: Flask, NumPy, Flask-CORS, Gunicorn
+                          </p>
                         </div>
 
                         <div className="p-4 border border-border rounded-lg">
@@ -508,7 +525,7 @@ CREATE TABLE notifications (
                         {[
                           "React", "TypeScript", "Vite", "Tailwind CSS", "Supabase", 
                           "PostgreSQL", "Recharts", "TanStack Query", "Finnhub API",
-                          "jsPDF", "date-fns", "Deno"
+                          "jsPDF", "date-fns", "Deno", "Python", "Flask", "NumPy"
                         ].map((tech) => (
                           <span key={tech} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                             {tech}

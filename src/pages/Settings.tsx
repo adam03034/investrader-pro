@@ -8,14 +8,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, User } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Save, User, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Settings() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -49,6 +62,35 @@ export default function Settings() {
       toast.error("Nepodarilo sa aktualizovať profil");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user || deleteConfirmation !== "VYMAZAŤ") return;
+
+    setDeleting(true);
+    try {
+      // Vymazanie všetkých dát používateľa
+      // 1. Vymazanie notifikácií
+      await supabase.from("notifications").delete().eq("user_id", user.id);
+
+      // 2. Vymazanie portfólia
+      await supabase.from("portfolio_assets").delete().eq("user_id", user.id);
+
+      // 3. Vymazanie profilu
+      await supabase.from("profiles").delete().eq("id", user.id);
+
+      // 4. Odhlásenie používateľa
+      await signOut();
+
+      toast.success("Váš účet bol úspešne vymazaný");
+      navigate("/auth");
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast.error("Nepodarilo sa vymazať účet. Skúste to prosím neskôr.");
+    } finally {
+      setDeleting(false);
+      setDeleteConfirmation("");
     }
   };
 
@@ -125,6 +167,85 @@ export default function Settings() {
                 )}
                 Uložiť zmeny
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Nebezpečná zóna - Vymazanie účtu */}
+          <Card className="glass-card max-w-xl border-destructive/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Nebezpečná zóna
+              </CardTitle>
+              <CardDescription>
+                Nezvratné akcie s vašim účtom.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <h4 className="font-medium text-destructive mb-2">Vymazanie účtu</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Po vymazaní účtu budú všetky vaše dáta, vrátane portfólia, notifikácií a nastavení, 
+                  trvalo odstránené. Táto akcia je nezvratná.
+                </p>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      Vymazať účet
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        Naozaj chcete vymazať svoj účet?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-3">
+                        <p>
+                          Táto akcia je <strong>nezvratná</strong>. Všetky vaše dáta budú trvalo vymazané:
+                        </p>
+                        <ul className="list-disc list-inside text-sm space-y-1">
+                          <li>Celé vaše portfólio a história</li>
+                          <li>Všetky notifikácie</li>
+                          <li>Profil a nastavenia</li>
+                        </ul>
+                        <div className="pt-2">
+                          <Label htmlFor="deleteConfirm" className="text-foreground">
+                            Pre potvrdenie napíšte <strong>VYMAZAŤ</strong>:
+                          </Label>
+                          <Input
+                            id="deleteConfirm"
+                            type="text"
+                            placeholder="VYMAZAŤ"
+                            value={deleteConfirmation}
+                            onChange={(e) => setDeleteConfirmation(e.target.value)}
+                            className="mt-2"
+                          />
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setDeleteConfirmation("")}>
+                        Zrušiť
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteAccount}
+                        disabled={deleteConfirmation !== "VYMAZAŤ" || deleting}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {deleting ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-2 h-4 w-4" />
+                        )}
+                        Natrvalo vymazať účet
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </CardContent>
           </Card>
         </main>
