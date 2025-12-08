@@ -87,6 +87,12 @@ const Index = () => {
     };
   }, [assets]);
 
+  const getUserDisplayName = (email?: string) => {
+    if (!email) return "Používateľ";
+    const name = email.split("@")[0];
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  };
+
   const handleAddAsset = (data: { symbol: string; name: string; quantity: number; avgPrice: number }) => {
     addAsset(data);
   };
@@ -112,7 +118,7 @@ const Index = () => {
         
         <main className="flex-1 p-6 lg:p-8 space-y-6">
           <div>
-            <h1 className="text-2xl font-bold mb-1">Vitajte späť</h1>
+            <h1 className="text-2xl font-bold mb-1">Vitajte späť, {getUserDisplayName(user.email)}</h1>
             <p className="text-muted-foreground">
               Prehľad vášho investičného portfólia.
               {quotesLoading && <span className="ml-2 text-xs text-primary animate-pulse">Načítavam live dáta...</span>}

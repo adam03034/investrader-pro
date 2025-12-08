@@ -1,16 +1,16 @@
 import { LayoutDashboard, PieChart, TrendingUp, FileText, Settings, HelpCircle } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", active: true },
-  { icon: PieChart, label: "Portfolio" },
-  { icon: TrendingUp, label: "Markets" },
-  { icon: FileText, label: "Reports" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: TrendingUp, label: "Trhy", path: "/markets" },
+  { icon: FileText, label: "Reporty", path: "/reports" },
 ];
 
 const bottomItems = [
-  { icon: Settings, label: "Settings" },
-  { icon: HelpCircle, label: "Help" },
+  { icon: Settings, label: "Nastavenia" },
+  { icon: HelpCircle, label: "Pomoc" },
 ];
 
 export function Sidebar() {
@@ -18,18 +18,19 @@ export function Sidebar() {
     <aside className="hidden lg:flex flex-col w-64 border-r border-border/50 bg-sidebar h-[calc(100vh-4rem)] sticky top-16">
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item) => (
-          <button
+          <NavLink
             key={item.label}
-            className={cn(
+            to={item.path}
+            className={({ isActive }) => cn(
               "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
-              item.active 
+              isActive 
                 ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
                 : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
           >
             <item.icon className="h-5 w-5" />
             {item.label}
-          </button>
+          </NavLink>
         ))}
       </nav>
 
