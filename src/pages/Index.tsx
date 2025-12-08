@@ -17,7 +17,7 @@ import { Loader2 } from "lucide-react";
 const Index = () => {
   const [addAssetOpen, setAddAssetOpen] = useState(false);
   const { user, loading: authLoading } = useAuth();
-  const { assets: dbAssets, isLoading: portfolioLoading, addAsset, isAdding } = usePortfolio();
+  const { assets: dbAssets, isLoading: portfolioLoading, addAsset, removeAsset, updateAsset, isAdding } = usePortfolio();
   const navigate = useNavigate();
   
   // Redirect to auth if not logged in
@@ -128,7 +128,13 @@ const Index = () => {
             <MarketOverview data={marketData || []} isLoading={marketLoading} />
           </div>
 
-          <AssetList assets={assets} onAddAsset={() => setAddAssetOpen(true)} isLoading={quotesLoading} />
+          <AssetList 
+            assets={assets} 
+            onAddAsset={() => setAddAssetOpen(true)} 
+            onRemoveAsset={removeAsset}
+            onUpdateAsset={updateAsset}
+            isLoading={quotesLoading} 
+          />
         </main>
       </div>
 
