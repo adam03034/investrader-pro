@@ -1,12 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { BarChart3, Bell, Search, Settings, LogOut, TrendingUp, TrendingDown, AlertCircle, ShoppingCart, CheckCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useStockQuotes, updateAssetsWithLiveData } from "@/hooks/useStockData";
 import { useNotifications } from "@/hooks/useNotifications";
+import { SearchBar } from "./SearchBar";
+import { AddAssetDialog } from "@/components/dashboard/AddAssetDialog";
 import { Asset } from "@/types/portfolio";
 import {
   DropdownMenu,
@@ -39,8 +40,19 @@ interface DisplayNotification {
 
 export function Header({ userEmail }: HeaderProps) {
   const { signOut } = useAuth();
-  const { assets: dbAssets } = usePortfolio();
+  const { assets: dbAssets, addAsset, isAdding } = usePortfolio();
   const { notifications: dbNotifications, unreadCount, markAllAsRead } = useNotifications();
+  const [addAssetOpen, setAddAssetOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<{ symbol: string; name: string } | null>(null);
+
+  const handleSelectStock = (symbol: string, name: string) => {
+    setSelectedStock({ symbol, name });
+    setAddAssetOpen(true);
+  };
+
+  const handleAddAsset = (data: { symbol: string; name: string; quantity: number; avgPrice: number }) => {
+    addAsset(data);
+  };
 
   // Get portfolio data for real-time notifications
   const baseAssets: Asset[] = useMemo(() => {
@@ -158,13 +170,7 @@ export function Header({ userEmail }: HeaderProps) {
         </Link>
 
         <div className="hidden md:flex items-center gap-2 flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Hľadať aktíva, trhy..." 
-              className="pl-10 bg-secondary border-border/50 focus:border-primary/50"
-            />
-          </div>
+          <SearchBar onSelectStock={handleSelectStock} />
         </div>
 
         <div className="flex items-center gap-2">
@@ -277,6 +283,15 @@ export function Header({ userEmail }: HeaderProps) {
           </DropdownMenu>
         </div>
       </div>
+
+      <AddAssetDialog
+        open={addAssetOpen}
+        onOpenChange={setAddAssetOpen}
+        onAddAsset={handleAddAsset}
+        isAdding={isAdding}
+        prefilledSymbol={selectedStock?.symbol}
+        prefilledName={selectedStock?.name}
+      />
     </header>
   );
 }
