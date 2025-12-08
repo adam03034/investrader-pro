@@ -1,20 +1,25 @@
-import { TrendingUp, TrendingDown, Plus } from "lucide-react";
+import { TrendingUp, TrendingDown, Plus, RefreshCw } from "lucide-react";
 import { Asset } from "@/types/portfolio";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AssetListProps {
   assets: Asset[];
   onAddAsset: () => void;
+  isLoading?: boolean;
 }
 
-export function AssetList({ assets, onAddAsset }: AssetListProps) {
+export function AssetList({ assets, onAddAsset, isLoading }: AssetListProps) {
   return (
     <div className="glass-card p-6 animate-fade-in" style={{ animationDelay: '500ms' }}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-lg font-semibold">Portfolio Assets</h2>
-          <p className="text-muted-foreground text-sm">Your current holdings</p>
+          <p className="text-muted-foreground text-sm flex items-center gap-2">
+            Your current holdings
+            {isLoading && <RefreshCw className="h-3 w-3 animate-spin text-primary" />}
+          </p>
         </div>
         <Button onClick={onAddAsset} size="sm" className="gap-2">
           <Plus className="h-4 w-4" />

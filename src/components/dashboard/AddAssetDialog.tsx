@@ -1,19 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { Search, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const popularAssets = [
-  { symbol: "AAPL", name: "Apple Inc.", price: 189.84, change: 1.15 },
-  { symbol: "MSFT", name: "Microsoft Corporation", price: 415.50, change: -0.30 },
-  { symbol: "GOOGL", name: "Alphabet Inc.", price: 152.30, change: 2.32 },
-  { symbol: "AMZN", name: "Amazon.com Inc.", price: 178.25, change: 0.85 },
-  { symbol: "META", name: "Meta Platforms Inc.", price: 505.75, change: 1.92 },
-  { symbol: "NVDA", name: "NVIDIA Corporation", price: 495.22, change: 1.75 },
-];
+import { useStockSearch, useStockQuotes } from "@/hooks/useStockData";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface AddAssetDialogProps {
   open: boolean;
@@ -22,15 +15,22 @@ interface AddAssetDialogProps {
 
 export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
   const [search, setSearch] = useState("");
-  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<{ symbol: string; description: string } | null>(null);
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
-
-  const filteredAssets = popularAssets.filter(
-    asset => 
-      asset.symbol.toLowerCase().includes(search.toLowerCase()) ||
-      asset.name.toLowerCase().includes(search.toLowerCase())
-  );
+  
+  const debouncedSearch = useDebounce(search, 300);
+  const { data: searchResults, isLoading: searchLoading } = useStockSearch(debouncedSearch);
+  
+  // Fetch quote for selected asset
+  const { data: quotes } = useStockQuotes(selectedAsset ? [selectedAsset.symbol] : []);
+  
+  // Update price when quote is received
+  useEffect(() => {
+    if (quotes && quotes.length > 0 && quotes[0].currentPrice) {
+      setPrice(quotes[0].currentPrice.toString());
+    }
+  }, [quotes]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,13 +43,23 @@ export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
     setSearch("");
   };
 
+  const handleClose = (isOpen: boolean) => {
+    onOpenChange(isOpen);
+    if (!isOpen) {
+      setSelectedAsset(null);
+      setQuantity("");
+      setPrice("");
+      setSearch("");
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-card border-border sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="text-xl">Add Asset to Portfolio</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Search for an asset and specify the quantity you own.
+            Search for a stock and specify the quantity you own.
           </DialogDescription>
         </DialogHeader>
 
@@ -57,50 +67,55 @@ export function AddAssetDialog({ open, onOpenChange }: AddAssetDialogProps) {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by symbol or name..."
+              placeholder="Search by symbol or company name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 bg-secondary border-border"
             />
+            {searchLoading && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+            )}
           </div>
 
           <div className="max-h-[200px] overflow-y-auto space-y-2">
-            {filteredAssets.map((asset) => (
-              <button
-                key={asset.symbol}
-                onClick={() => {
-                  setSelectedAsset(asset.symbol);
-                  setPrice(asset.price.toString());
-                }}
-                className={cn(
-                  "w-full flex items-center justify-between p-3 rounded-lg transition-all",
-                  selectedAsset === asset.symbol 
-                    ? "bg-primary/20 border border-primary/50" 
-                    : "bg-secondary/50 hover:bg-secondary border border-transparent"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-                    {asset.symbol.slice(0, 2)}
+            {searchResults && searchResults.length > 0 ? (
+              searchResults.slice(0, 10).map((result: { symbol: string; description: string; type: string }) => (
+                <button
+                  key={result.symbol}
+                  onClick={() => {
+                    setSelectedAsset({ symbol: result.symbol, description: result.description });
+                    setSearch("");
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between p-3 rounded-lg transition-all",
+                    selectedAsset?.symbol === result.symbol 
+                      ? "bg-primary/20 border border-primary/50" 
+                      : "bg-secondary/50 hover:bg-secondary border border-transparent"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                      {result.symbol.slice(0, 2)}
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-sm">{result.symbol}</p>
+                      <p className="text-muted-foreground text-xs truncate max-w-[250px]">{result.description}</p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="font-medium text-sm">{asset.symbol}</p>
-                    <p className="text-muted-foreground text-xs">{asset.name}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono text-sm font-medium">${asset.price.toFixed(2)}</p>
-                  <p className={cn(
-                    "text-xs flex items-center justify-end gap-1",
-                    asset.change >= 0 ? "price-positive" : "price-negative"
-                  )}>
-                    {asset.change >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                    {asset.change >= 0 ? '+' : ''}{asset.change.toFixed(2)}%
-                  </p>
-                </div>
-              </button>
-            ))}
+                  <span className="text-xs text-muted-foreground">{result.type}</span>
+                </button>
+              ))
+            ) : search.length > 0 && !searchLoading ? (
+              <p className="text-center text-muted-foreground text-sm py-4">No results found</p>
+            ) : null}
           </div>
+
+          {selectedAsset && (
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+              <p className="font-medium">{selectedAsset.symbol}</p>
+              <p className="text-muted-foreground text-sm truncate">{selectedAsset.description}</p>
+            </div>
+          )}
 
           {selectedAsset && (
             <form onSubmit={handleSubmit} className="space-y-4 pt-4 border-t border-border">
