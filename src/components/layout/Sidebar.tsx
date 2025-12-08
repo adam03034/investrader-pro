@@ -6,10 +6,10 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: TrendingUp, label: "Trhy", path: "/markets" },
   { icon: FileText, label: "Reporty", path: "/reports" },
+  { icon: Settings, label: "Nastavenia", path: "/settings" },
 ];
 
 const bottomItems = [
-  { icon: Settings, label: "Nastavenia" },
   { icon: HelpCircle, label: "Pomoc" },
 ];
 

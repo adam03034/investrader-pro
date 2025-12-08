@@ -13,7 +13,8 @@ export function useAuth() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchOrCreateProfile = async (userId: string, email?: string) => {
+    // First try to fetch existing profile
     const { data } = await supabase
       .from("profiles")
       .select("id, display_name")
@@ -22,6 +23,20 @@ export function useAuth() {
     
     if (data) {
       setProfile(data);
+    } else if (email) {
+      // Profile doesn't exist (user created before profiles table), create one
+      const displayName = email.split("@")[0].split(/[._-]/)[0];
+      const capitalizedName = displayName.charAt(0).toUpperCase() + displayName.slice(1).toLowerCase();
+      
+      const { data: newProfile } = await supabase
+        .from("profiles")
+        .insert({ id: userId, display_name: capitalizedName })
+        .select("id, display_name")
+        .single();
+      
+      if (newProfile) {
+        setProfile(newProfile);
+      }
     }
   };
 
@@ -36,7 +51,7 @@ export function useAuth() {
         // Fetch profile after auth state change
         if (session?.user) {
           setTimeout(() => {
-            fetchProfile(session.user.id);
+            fetchOrCreateProfile(session.user.id, session.user.email);
           }, 0);
         } else {
           setProfile(null);
@@ -51,7 +66,7 @@ export function useAuth() {
       setLoading(false);
       
       if (session?.user) {
-        fetchProfile(session.user.id);
+        fetchOrCreateProfile(session.user.id, session.user.email);
       }
     });
 
