@@ -15,7 +15,7 @@ import { Loader2 } from "lucide-react";
 
 const Index = () => {
   const [addAssetOpen, setAddAssetOpen] = useState(false);
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const { assets: dbAssets, isLoading: portfolioLoading, addAsset, removeAsset, updateAsset, isAdding } = usePortfolio();
   const navigate = useNavigate();
   
@@ -86,13 +86,11 @@ const Index = () => {
     };
   }, [assets]);
 
-  const getUserDisplayName = (email?: string) => {
-    if (!email) return "Používateľ";
-    const emailPrefix = email.split("@")[0];
-    // Extract first name - split by common separators like . _ -
-    const nameParts = emailPrefix.split(/[._-]/);
-    const firstName = nameParts[0];
-    return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+  const getUserDisplayName = () => {
+    if (profile?.display_name) {
+      return profile.display_name;
+    }
+    return "Používateľ";
   };
 
   const handleAddAsset = (data: { symbol: string; name: string; quantity: number; avgPrice: number }) => {
@@ -120,7 +118,7 @@ const Index = () => {
         
         <main className="flex-1 p-6 lg:p-8 space-y-6">
           <div>
-            <h1 className="text-2xl font-bold mb-1">Vitajte späť, {getUserDisplayName(user.email)}</h1>
+            <h1 className="text-2xl font-bold mb-1">Vitajte späť, {getUserDisplayName()}</h1>
             <p className="text-muted-foreground">
               Prehľad vášho investičného portfólia.
               {quotesLoading && <span className="ml-2 text-xs text-primary animate-pulse">Načítavam live dáta...</span>}
