@@ -125,7 +125,7 @@ const Index = () => {
             </p>
           </div>
 
-          <PortfolioStats stats={portfolioStats} />
+          <PortfolioStats stats={portfolioStats} assetCount={assets.length} />
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2">

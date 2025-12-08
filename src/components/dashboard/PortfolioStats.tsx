@@ -43,9 +43,10 @@ function StatCard({ title, value, change, changeValue, icon, delay = 0 }: StatCa
 
 interface PortfolioStatsProps {
   stats: PortfolioStatsType;
+  assetCount?: number;
 }
 
-export function PortfolioStats({ stats }: PortfolioStatsProps) {
+export function PortfolioStats({ stats, assetCount = 0 }: PortfolioStatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard
@@ -74,7 +75,7 @@ export function PortfolioStats({ stats }: PortfolioStatsProps) {
       />
       <StatCard
         title="Assets"
-        value="5"
+        value={assetCount.toString()}
         icon={<PieChart className="h-6 w-6" />}
         delay={300}
       />
