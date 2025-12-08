@@ -1,4 +1,5 @@
 import { BarChart3, Bell, Search, Settings, LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -53,8 +54,10 @@ export function Header({ userEmail }: HeaderProps) {
             <Bell className="h-5 w-5" />
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-5 w-5" />
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/settings">
+              <Settings className="h-5 w-5" />
+            </Link>
           </Button>
           
           <DropdownMenu>
