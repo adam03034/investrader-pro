@@ -1,17 +1,38 @@
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import { MarketData } from "@/types/portfolio";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface MarketOverviewProps {
   data: MarketData[];
+  isLoading?: boolean;
 }
 
-export function MarketOverview({ data }: MarketOverviewProps) {
+export function MarketOverview({ data, isLoading }: MarketOverviewProps) {
+  if (isLoading) {
+    return (
+      <div className="glass-card p-6 animate-fade-in" style={{ animationDelay: '600ms' }}>
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold">Market Overview</h2>
+          <p className="text-muted-foreground text-sm flex items-center gap-2">
+            <RefreshCw className="h-3 w-3 animate-spin" />
+            Loading live data...
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="glass-card p-6 animate-fade-in" style={{ animationDelay: '600ms' }}>
       <div className="mb-6">
         <h2 className="text-lg font-semibold">Market Overview</h2>
-        <p className="text-muted-foreground text-sm">Major indices & ETFs</p>
+        <p className="text-muted-foreground text-sm">Live market data</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -37,11 +58,11 @@ export function MarketOverview({ data }: MarketOverviewProps) {
                 ) : (
                   <TrendingDown className="h-3 w-3" />
                 )}
-                {item.changePercent24h >= 0 ? '+' : ''}{item.changePercent24h.toFixed(2)}%
+                {item.changePercent24h >= 0 ? '+' : ''}{item.changePercent24h?.toFixed(2) || '0.00'}%
               </div>
             </div>
             <p className="font-mono font-bold text-lg">
-              ${item.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ${item.price?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
             </p>
           </div>
         ))}
