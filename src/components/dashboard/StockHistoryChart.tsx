@@ -138,23 +138,25 @@ export function StockHistoryChart() {
           </div>
           <div className="ml-auto flex items-center gap-4">
             <span className="text-2xl font-bold">
-              ${historyData.currentPrice.toFixed(2)}
+              ${historyData.currentPrice?.toFixed(2) ?? "N/A"}
             </span>
-            <div
-              className={`flex items-center gap-1 ${
-                historyData.change >= 0 ? "text-profit" : "text-loss"
-              }`}
-            >
-              {historyData.change >= 0 ? (
-                <TrendingUp className="h-4 w-4" />
-              ) : (
-                <TrendingDown className="h-4 w-4" />
-              )}
-              <span className="font-medium">
-                {historyData.change >= 0 ? "+" : ""}
-                {historyData.change.toFixed(2)} ({historyData.changePercent.toFixed(2)}%)
-              </span>
-            </div>
+            {historyData.change !== null && historyData.changePercent !== null && (
+              <div
+                className={`flex items-center gap-1 ${
+                  (historyData.change ?? 0) >= 0 ? "text-profit" : "text-loss"
+                }`}
+              >
+                {(historyData.change ?? 0) >= 0 ? (
+                  <TrendingUp className="h-4 w-4" />
+                ) : (
+                  <TrendingDown className="h-4 w-4" />
+                )}
+                <span className="font-medium">
+                  {(historyData.change ?? 0) >= 0 ? "+" : ""}
+                  {historyData.change?.toFixed(2) ?? "0.00"} ({historyData.changePercent?.toFixed(2) ?? "0.00"}%)
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
