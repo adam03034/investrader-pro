@@ -30,14 +30,14 @@ export function Header({ userEmail }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-4">
+          <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <div className="p-2 rounded-xl bg-primary/20 glow-primary">
               <BarChart3 className="h-6 w-6 text-primary" />
             </div>
             <span className="text-xl font-bold tracking-tight">TradePro</span>
           </div>
-        </div>
+        </Link>
 
         <div className="hidden md:flex items-center gap-2 flex-1 max-w-md mx-8">
           <div className="relative w-full">
