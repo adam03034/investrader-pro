@@ -3,11 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { PortfolioStats } from "@/components/dashboard/PortfolioStats";
-import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
+import { StockHistoryChart } from "@/components/dashboard/StockHistoryChart";
 import { AssetList } from "@/components/dashboard/AssetList";
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { AddAssetDialog } from "@/components/dashboard/AddAssetDialog";
-import { mockPriceHistory } from "@/data/mockData";
 import { useStockQuotes, useMarketData, updateAssetsWithLiveData } from "@/hooks/useStockData";
 import { useAuth } from "@/hooks/useAuth";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -89,8 +88,11 @@ const Index = () => {
 
   const getUserDisplayName = (email?: string) => {
     if (!email) return "Používateľ";
-    const name = email.split("@")[0];
-    return name.charAt(0).toUpperCase() + name.slice(1);
+    const emailPrefix = email.split("@")[0];
+    // Extract first name - split by common separators like . _ -
+    const nameParts = emailPrefix.split(/[._-]/);
+    const firstName = nameParts[0];
+    return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
   };
 
   const handleAddAsset = (data: { symbol: string; name: string; quantity: number; avgPrice: number }) => {
@@ -129,7 +131,7 @@ const Index = () => {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2">
-              <PortfolioChart data={mockPriceHistory} />
+              <StockHistoryChart />
             </div>
             <MarketOverview data={marketData || []} isLoading={marketLoading} />
           </div>
