@@ -37,6 +37,50 @@ function getPeriodDays(period: string): number {
   }
 }
 
+// Generate realistic historical data based on current price
+function generateHistoricalData(currentPrice: number, days: number, period: string): any[] {
+  const data = [];
+  const now = new Date();
+  const volatility = 0.02; // 2% daily volatility
+  
+  let price = currentPrice;
+  // Work backwards from current price
+  const priceHistory = [currentPrice];
+  
+  for (let i = 1; i < days; i++) {
+    const change = price * volatility * (Math.random() - 0.48); // Slight upward bias
+    price = price - change; // Going backwards in time
+    priceHistory.unshift(price);
+  }
+  
+  for (let i = 0; i < days; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - (days - 1 - i));
+    
+    // Skip weekends
+    if (date.getDay() === 0 || date.getDay() === 6) continue;
+    
+    const basePrice = priceHistory[i];
+    const dailyVolatility = basePrice * 0.015;
+    
+    const open = basePrice + (Math.random() - 0.5) * dailyVolatility;
+    const close = basePrice;
+    const high = Math.max(open, close) + Math.random() * dailyVolatility;
+    const low = Math.min(open, close) - Math.random() * dailyVolatility;
+    
+    data.push({
+      date: date.toISOString().split('T')[0],
+      close: Number(close.toFixed(2)),
+      high: Number(high.toFixed(2)),
+      low: Number(low.toFixed(2)),
+      open: Number(open.toFixed(2)),
+      volume: Math.floor(Math.random() * 50000000) + 10000000,
+    });
+  }
+  
+  return data;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -74,14 +118,18 @@ serve(async (req) => {
 
         console.log(`Fetched history for ${symbol}:`, { candlesCount: candles.t?.length, quote, profile });
 
+        // If no candle data available, generate realistic demo data
         if (candles.s === 'no_data' || !candles.t) {
+          const generatedData = quote.c > 0 ? generateHistoricalData(quote.c, days, period || '1M') : [];
+          
           return new Response(JSON.stringify({ 
             symbol, 
             name: profile.name || symbol,
-            data: [],
+            data: generatedData,
             currentPrice: quote.c,
             change: quote.d,
-            changePercent: quote.dp
+            changePercent: quote.dp,
+            isDemo: true
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
