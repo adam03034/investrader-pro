@@ -7,16 +7,16 @@ interface PortfolioAllocationProps {
 }
 
 const COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(142 76% 36%)",
-  "hsl(262 83% 58%)",
-  "hsl(24 95% 53%)",
-  "hsl(340 82% 52%)",
+  "#10B981", // emerald
+  "#8B5CF6", // violet
+  "#F59E0B", // amber
+  "#EF4444", // red
+  "#3B82F6", // blue
+  "#EC4899", // pink
+  "#14B8A6", // teal
+  "#F97316", // orange
+  "#6366F1", // indigo
+  "#84CC16", // lime
 ];
 
 export function PortfolioAllocation({ assets }: PortfolioAllocationProps) {
