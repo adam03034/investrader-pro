@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 
 // URL Python API - nastav po deployi
 const PYTHON_API_URL = import.meta.env.VITE_PYTHON_API_URL || "http://localhost:5000";
+console.log("PYTHON_API_URL =", PYTHON_API_URL);
 
 export interface PythonAnalysisResult {
   input_length: number;
@@ -135,13 +136,7 @@ export function usePythonAnalysis() {
 // Hook pre RSI
 export function usePythonRSI() {
   return useMutation({
-    mutationFn: async ({
-      prices,
-      period = 14,
-    }: {
-      prices: number[];
-      period?: number;
-    }): Promise<RSIResult> => {
+    mutationFn: async ({ prices, period = 14 }: { prices: number[]; period?: number }): Promise<RSIResult> => {
       const response = await fetch(`${PYTHON_API_URL}/api/rsi`, {
         method: "POST",
         headers: {
