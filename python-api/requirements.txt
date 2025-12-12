@@ -1,8 +1,4 @@
-# TradePro - Python API Dependencies
-# Bakalárska práca - EUBA
-
-flask==3.0.0
+Flask==3.0.0
 flask-cors==4.0.0
-numpy==1.26.2
+numpy==2.2.1
 gunicorn==21.2.0
-python-dotenv==1.0.0
