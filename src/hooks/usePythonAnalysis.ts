@@ -1,10 +1,73 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 
-// URL Python API - nastav po deployi
-const PYTHON_API_URL = import.meta.env.VITE_PYTHON_API_URL || "http://localhost:5000";
+// -----------------------------
+// Konfigurácia API URL
+// -----------------------------
+function normalizeBaseUrl(url: string) {
+  return url.replace(/\/+$/, "");
+}
+
+const ENV_API_URL = import.meta.env.VITE_PYTHON_API_URL as string | undefined;
+
+const PYTHON_API_URL =
+  ENV_API_URL && ENV_API_URL.trim().length > 0
+    ? normalizeBaseUrl(ENV_API_URL.trim())
+    : import.meta.env.DEV
+      ? "http://localhost:5000"
+      : "";
+
+// Debug (môžeš neskôr zmazať)
 console.log("PYTHON_API_URL =", PYTHON_API_URL);
 
+// -----------------------------
+// Fetch helper s timeoutom
+// -----------------------------
+async function fetchJson<T>(url: string, options: RequestInit & { timeoutMs?: number } = {}): Promise<T> {
+  if (!PYTHON_API_URL) {
+    throw new Error("Missing VITE_PYTHON_API_URL. Nastav env premennú a sprav redeploy/rebuild frontendu.");
+  }
+
+  const { timeoutMs = 15000, ...rest } = options;
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      ...rest,
+      signal: controller.signal,
+      cache: "no-store",
+    });
+
+    // ak server vráti html (napr. 502), toto to zvládne
+    const text = await res.text();
+    let json: any = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = { error: text || "Invalid JSON response" };
+    }
+
+    if (!res.ok) {
+      const msg = json?.error || json?.message || `HTTP ${res.status} (${res.statusText || "error"})`;
+      throw new Error(msg);
+    }
+
+    return json as T;
+  } catch (e: any) {
+    if (e?.name === "AbortError") {
+      throw new Error("Request timeout (API môže byť práve cold-start na Renderi)");
+    }
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// -----------------------------
+// Typy
+// -----------------------------
 export interface PythonAnalysisResult {
   input_length: number;
   indicators: {
@@ -79,6 +142,10 @@ export interface BollingerResult {
   };
 }
 
+// -----------------------------
+// Hooks
+// -----------------------------
+
 // Hook pre komplexnú analýzu
 export function usePythonAnalysis() {
   const [error, setError] = useState<string | null>(null);
@@ -100,20 +167,12 @@ export function usePythonAnalysis() {
         bb_std_dev?: number;
       };
     }): Promise<PythonAnalysisResult> => {
-      const response = await fetch(`${PYTHON_API_URL}/api/analyze`, {
+      return fetchJson<PythonAnalysisResult>(`${PYTHON_API_URL}/api/analyze`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prices, indicators, settings }),
+        timeoutMs: 20000,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Chyba pri analýze");
-      }
-
-      return response.json();
     },
     onError: (err: Error) => {
       setError(err.message);
@@ -137,20 +196,12 @@ export function usePythonAnalysis() {
 export function usePythonRSI() {
   return useMutation({
     mutationFn: async ({ prices, period = 14 }: { prices: number[]; period?: number }): Promise<RSIResult> => {
-      const response = await fetch(`${PYTHON_API_URL}/api/rsi`, {
+      return fetchJson<RSIResult>(`${PYTHON_API_URL}/api/rsi`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prices, period }),
+        timeoutMs: 20000,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Chyba pri výpočte RSI");
-      }
-
-      return response.json();
     },
   });
 }
@@ -169,20 +220,12 @@ export function usePythonMACD() {
       slow_period?: number;
       signal_period?: number;
     }): Promise<MACDResult> => {
-      const response = await fetch(`${PYTHON_API_URL}/api/macd`, {
+      return fetchJson<MACDResult>(`${PYTHON_API_URL}/api/macd`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prices, fast_period, slow_period, signal_period }),
+        timeoutMs: 20000,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Chyba pri výpočte MACD");
-      }
-
-      return response.json();
     },
   });
 }
@@ -199,20 +242,12 @@ export function usePythonBollinger() {
       period?: number;
       std_dev?: number;
     }): Promise<BollingerResult> => {
-      const response = await fetch(`${PYTHON_API_URL}/api/bollinger`, {
+      return fetchJson<BollingerResult>(`${PYTHON_API_URL}/api/bollinger`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prices, period, std_dev }),
+        timeoutMs: 20000,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Chyba pri výpočte Bollinger Bands");
-      }
-
-      return response.json();
     },
   });
 }
@@ -222,13 +257,10 @@ export function usePythonAPIHealth() {
   return useQuery({
     queryKey: ["python-api-health"],
     queryFn: async () => {
-      const response = await fetch(`${PYTHON_API_URL}/api/health`);
-      if (!response.ok) {
-        throw new Error("Python API nedostupné");
-      }
-      return response.json();
+      return fetchJson(`${PYTHON_API_URL}/api/health`, { timeoutMs: 15000 });
     },
-    retry: 1,
-    refetchInterval: 30000, // Kontrola každých 30 sekúnd
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    refetchInterval: 30000,
   });
 }
