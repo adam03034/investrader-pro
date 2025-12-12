@@ -10,16 +10,19 @@ import {
   Line,
   ComposedChart,
   ReferenceLine,
+  Bar,
 } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Search, TrendingUp, TrendingDown, Loader2, Activity } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search, TrendingUp, TrendingDown, Loader2, Activity, Cpu, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { addIndicatorsToData, IndicatorData } from "@/utils/technicalIndicators";
+import { usePythonAnalysis, usePythonAPIHealth } from "@/hooks/usePythonAnalysis";
 
 type Period = "1W" | "1M" | "3M" | "6M" | "1Y";
 
@@ -76,6 +79,8 @@ export function StockHistoryChart() {
   const [activeSymbol, setActiveSymbol] = useState("AAPL");
   const [period, setPeriod] = useState<Period>("1M");
   const [showIndicators, setShowIndicators] = useState(false);
+  const [showPythonAnalysis, setShowPythonAnalysis] = useState(false);
+  const [pythonTab, setPythonTab] = useState<"rsi" | "macd" | "bollinger">("rsi");
   const [indicators, setIndicators] = useState<IndicatorSettings>({
     sma20: true,
     sma50: false,
@@ -85,6 +90,10 @@ export function StockHistoryChart() {
   });
 
   const { data: historyData, isLoading, error } = useStockHistory(activeSymbol, period);
+  
+  // Python API hooks
+  const { analyzeAsync, data: pythonData, isLoading: isPythonLoading, error: pythonError, reset: resetPython } = usePythonAnalysis();
+  const { data: healthData, isError: isApiOffline } = usePythonAPIHealth();
 
   // Calculate data with indicators
   const chartData = useMemo(() => {
@@ -100,10 +109,82 @@ export function StockHistoryChart() {
     }));
   }, [chartData]);
 
+  // Extract prices for Python analysis
+  const pricesForPython = useMemo(() => {
+    if (!historyData?.data) return [];
+    return historyData.data.map(d => d.close);
+  }, [historyData?.data]);
+
+  const datesForPython = useMemo(() => {
+    if (!historyData?.data) return [];
+    return historyData.data.map(d => d.date);
+  }, [historyData?.data]);
+
+  // Python analysis chart data
+  const pythonChartData = useMemo(() => {
+    if (!pythonData || !pricesForPython.length) return [];
+    return pricesForPython.map((price, index) => ({
+      date: datesForPython[index] || index.toString(),
+      price,
+      rsi: pythonData.indicators.rsi?.values[index] ?? null,
+      macd: pythonData.indicators.macd?.macd_line[index] ?? null,
+      signal: pythonData.indicators.macd?.signal_line[index] ?? null,
+      histogram: pythonData.indicators.macd?.histogram[index] ?? null,
+      upper: pythonData.indicators.bollinger?.upper_band[index] ?? null,
+      middle: pythonData.indicators.bollinger?.middle_band[index] ?? null,
+      lower: pythonData.indicators.bollinger?.lower_band[index] ?? null,
+    }));
+  }, [pythonData, pricesForPython, datesForPython]);
+
+  // Python analysis helper functions
+  const getCurrentRSI = () => {
+    if (!pythonData?.indicators.rsi) return null;
+    const values = pythonData.indicators.rsi.values.filter((v) => v !== null);
+    return values[values.length - 1];
+  };
+
+  const getCurrentMACD = () => {
+    if (!pythonData?.indicators.macd) return null;
+    const macdValues = pythonData.indicators.macd.macd_line.filter((v) => v !== null);
+    const signalValues = pythonData.indicators.macd.signal_line.filter((v) => v !== null);
+    return {
+      macd: macdValues[macdValues.length - 1],
+      signal: signalValues[signalValues.length - 1],
+    };
+  };
+
+  const getRSISignal = () => {
+    const rsi = getCurrentRSI();
+    if (!rsi) return null;
+    if (rsi > 70) return { text: "Prekúpené", color: "text-loss" };
+    if (rsi < 30) return { text: "Prepredané", color: "text-profit" };
+    return { text: "Neutrálne", color: "text-muted-foreground" };
+  };
+
+  const getMACDSignal = () => {
+    const macd = getCurrentMACD();
+    if (!macd) return null;
+    if (macd.macd > macd.signal) return { text: "Býčí signál", color: "text-profit" };
+    return { text: "Medvedí signál", color: "text-loss" };
+  };
+
+  const handlePythonAnalysis = async () => {
+    if (pricesForPython.length < 30) return;
+    try {
+      await analyzeAsync({
+        prices: pricesForPython,
+        indicators: { rsi: true, macd: true, bollinger: true },
+      });
+    } catch (err) {
+      console.error("Python analysis error:", err);
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setActiveSymbol(searchQuery.trim().toUpperCase());
+      resetPython(); // Reset Python analysis when changing symbol
     }
   };
 
@@ -136,15 +217,26 @@ export function StockHistoryChart() {
               {historyData?.isDemo && <span className="ml-2 text-xs text-primary">(simulované dáta)</span>}
             </p>
           </div>
-          <Button
-            variant={showIndicators ? "default" : "outline"}
-            size="sm"
-            onClick={() => setShowIndicators(!showIndicators)}
-            className="gap-2"
-          >
-            <Activity className="h-4 w-4" />
-            Indikátory
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant={showIndicators ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowIndicators(!showIndicators)}
+              className="gap-2"
+            >
+              <Activity className="h-4 w-4" />
+              Indikátory
+            </Button>
+            <Button
+              variant={showPythonAnalysis ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowPythonAnalysis(!showPythonAnalysis)}
+              className="gap-2"
+            >
+              <Cpu className="h-4 w-4" />
+              Python API
+            </Button>
+          </div>
         </div>
 
         {showIndicators && (
@@ -204,6 +296,184 @@ export function StockHistoryChart() {
                 RSI (14)
               </Label>
             </div>
+          </div>
+        )}
+
+        {/* Python Analysis Section */}
+        {showPythonAnalysis && (
+          <div className="p-4 bg-secondary/30 rounded-lg animate-fade-in space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-primary" />
+                <span className="font-medium">Python Technická Analýza</span>
+                <Badge variant="outline" className="text-xs">Flask API</Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                {isApiOffline ? (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    API Offline
+                  </Badge>
+                ) : healthData ? (
+                  <Badge variant="secondary" className="gap-1 text-profit">
+                    <CheckCircle2 className="h-3 w-3" />
+                    API Online
+                  </Badge>
+                ) : null}
+                <Button
+                  onClick={handlePythonAnalysis}
+                  disabled={isPythonLoading || isApiOffline || pricesForPython.length < 30}
+                  size="sm"
+                >
+                  {isPythonLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Analyzujem...
+                    </>
+                  ) : (
+                    "Spustiť analýzu"
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {pythonError && (
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
+                {pythonError}
+              </div>
+            )}
+
+            {pricesForPython.length < 30 && (
+              <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg text-sm text-warning">
+                Pre Python analýzu je potrebných minimálne 30 cenových bodov. Skúste dlhšie obdobie.
+              </div>
+            )}
+
+            {pythonData && (
+              <>
+                {/* Tabs */}
+                <div className="flex gap-1 p-1 bg-secondary/50 rounded-lg w-fit">
+                  {[
+                    { key: "rsi" as const, label: "RSI" },
+                    { key: "macd" as const, label: "MACD" },
+                    { key: "bollinger" as const, label: "Bollinger" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setPythonTab(tab.key)}
+                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                        pythonTab === tab.key
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Summary */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-3 bg-background/50 rounded-lg">
+                    <div className="text-sm text-muted-foreground">RSI (14)</div>
+                    <div className="text-xl font-bold">{getCurrentRSI()?.toFixed(2) ?? "-"}</div>
+                    {getRSISignal() && (
+                      <div className={`text-xs ${getRSISignal()?.color}`}>
+                        {getRSISignal()?.text}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 bg-background/50 rounded-lg">
+                    <div className="text-sm text-muted-foreground">MACD</div>
+                    <div className="text-xl font-bold">
+                      {getCurrentMACD()?.macd?.toFixed(4) ?? "-"}
+                    </div>
+                    {getMACDSignal() && (
+                      <div className={`text-xs ${getMACDSignal()?.color}`}>
+                        {getMACDSignal()?.text}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 bg-background/50 rounded-lg">
+                    <div className="text-sm text-muted-foreground">Bollinger</div>
+                    <div className="text-xl font-bold">
+                      {pythonData.indicators.bollinger?.settings.period ?? 20} dní
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      ±{pythonData.indicators.bollinger?.settings.std_dev ?? 2}σ
+                    </div>
+                  </div>
+                </div>
+
+                {/* Python Chart */}
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    {pythonTab === "rsi" ? (
+                      <ComposedChart data={pythonChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={10} hide />
+                        <YAxis domain={[0, 100]} ticks={[30, 50, 70]} stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                          formatter={(value: number) => [value?.toFixed(2) ?? "-", "RSI"]}
+                        />
+                        <ReferenceLine y={70} stroke="#EF4444" strokeDasharray="3 3" />
+                        <ReferenceLine y={30} stroke="#22C55E" strokeDasharray="3 3" />
+                        <Line type="monotone" dataKey="rsi" stroke="#EC4899" strokeWidth={2} dot={false} connectNulls />
+                      </ComposedChart>
+                    ) : pythonTab === "macd" ? (
+                      <ComposedChart data={pythonChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={10} hide />
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                        />
+                        <ReferenceLine y={0} stroke="hsl(var(--border))" />
+                        <Bar dataKey="histogram" fill="hsl(var(--primary))" opacity={0.5} />
+                        <Line type="monotone" dataKey="macd" stroke="#3B82F6" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="signal" stroke="#F97316" strokeWidth={2} dot={false} connectNulls />
+                      </ComposedChart>
+                    ) : (
+                      <ComposedChart data={pythonChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={10} hide />
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} domain={["auto", "auto"]} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                        />
+                        <Area type="monotone" dataKey="upper" stroke="#22C55E" fill="#22C55E" fillOpacity={0.1} dot={false} connectNulls />
+                        <Area type="monotone" dataKey="lower" stroke="#EF4444" fill="#EF4444" fillOpacity={0.1} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="middle" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="3 3" dot={false} connectNulls />
+                        <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                      </ComposedChart>
+                    )}
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  <strong>Poznámka:</strong> {pythonData.indicators[pythonTab]?.description}
+                </div>
+              </>
+            )}
+
+            {!pythonData && !isPythonLoading && pricesForPython.length >= 30 && (
+              <div className="text-center text-muted-foreground text-sm py-4">
+                Kliknutím na "Spustiť analýzu" získate technické indikátory z Python API
+              </div>
+            )}
           </div>
         )}
 
