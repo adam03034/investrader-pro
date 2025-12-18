@@ -82,7 +82,7 @@ export function StockHistoryChart() {
   const [showPythonAnalysis, setShowPythonAnalysis] = useState(false);
   const [pythonTab, setPythonTab] = useState<"rsi" | "macd" | "bollinger">("rsi");
   const [indicators, setIndicators] = useState<IndicatorSettings>({
-    sma20: true,
+    sma20: false,
     sma50: false,
     ema12: false,
     ema26: false,
