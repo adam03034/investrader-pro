@@ -92,6 +92,17 @@ export function usePortfolio() {
           .eq("id", existing.id);
 
         if (error) throw error;
+
+        // Create notification for the additional purchase
+        if (user) {
+          await createPurchaseNotification(
+            user.id,
+            input.symbol,
+            input.name,
+            input.quantity,
+            input.avgPrice
+          );
+        }
       } else {
         // Insert new asset
         const { error } = await supabase
