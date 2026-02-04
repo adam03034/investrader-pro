@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BarChart3, Bell, Search, Settings, LogOut, TrendingUp, TrendingDown, AlertCircle, ShoppingCart, CheckCheck } from "lucide-react";
+import { BarChart3, Bell, Search, Settings, LogOut, TrendingUp, TrendingDown, AlertCircle, ShoppingCart, CheckCheck, X, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,7 +41,7 @@ interface DisplayNotification {
 export function Header({ userEmail }: HeaderProps) {
   const { signOut } = useAuth();
   const { assets: dbAssets, addAsset, isAdding } = usePortfolio();
-  const { notifications: dbNotifications, unreadCount, markAllAsRead } = useNotifications();
+  const { notifications: dbNotifications, unreadCount, markAllAsRead, deleteNotification } = useNotifications();
   const [addAssetOpen, setAddAssetOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<{ symbol: string; name: string } | null>(null);
 
@@ -217,7 +217,7 @@ export function Header({ userEmail }: HeaderProps) {
                     {allNotifications.map((notif) => (
                       <div
                         key={notif.id}
-                        className={`p-3 hover:bg-secondary/50 transition-colors cursor-pointer ${
+                        className={`p-3 hover:bg-secondary/50 transition-colors group ${
                           notif.is_read === false ? "bg-secondary/30" : ""
                         }`}
                       >
@@ -239,6 +239,20 @@ export function Header({ userEmail }: HeaderProps) {
                               </p>
                             )}
                           </div>
+                          {/* Only show delete button for database notifications (not real-time alerts) */}
+                          {notif.created_at && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNotification(notif.id);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
