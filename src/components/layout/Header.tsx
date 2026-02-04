@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BarChart3, Bell, Search, Settings, LogOut, TrendingUp, TrendingDown, AlertCircle, ShoppingCart, CheckCheck, X, Trash2 } from "lucide-react";
+import { BarChart3, Bell, Settings, LogOut, TrendingUp, TrendingDown, AlertCircle, ShoppingCart, CheckCheck, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +8,7 @@ import { useStockQuotes, updateAssetsWithLiveData } from "@/hooks/useStockData";
 import { useNotifications } from "@/hooks/useNotifications";
 import { SearchBar } from "./SearchBar";
 import { AddAssetDialog } from "@/components/dashboard/AddAssetDialog";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Asset } from "@/types/portfolio";
 import {
   DropdownMenu,
@@ -270,6 +271,8 @@ export function Header({ userEmail }: HeaderProps) {
               )}
             </PopoverContent>
           </Popover>
+
+          <ThemeToggle />
 
           <Button variant="ghost" size="icon" asChild>
             <Link to="/settings">

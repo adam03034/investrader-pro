@@ -6,6 +6,61 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 98%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 6%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.75rem;
+
+    --chart-positive: 142 71% 45%;
+    --chart-negative: 0 72% 51%;
+    --chart-line: 199 89% 48%;
+    --chart-grid: 220 13% 91%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 199 89% 48%;
+
+    --profit: 142 71% 45%;
+    --loss: 0 72% 51%;
+  }
+
+  .dark {
     --background: 222 47% 6%;
     --foreground: 210 40% 98%;
 
@@ -40,8 +95,6 @@
     --input: 222 47% 14%;
     --ring: 199 89% 48%;
 
-    --radius: 0.75rem;
-
     --chart-positive: 142 71% 45%;
     --chart-negative: 0 72% 51%;
     --chart-line: 199 89% 48%;
@@ -55,11 +108,9 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 222 47% 14%;
     --sidebar-ring: 199 89% 48%;
-  }
 
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+    --profit: 142 71% 45%;
+    --loss: 0 72% 51%;
   }
 }
 
